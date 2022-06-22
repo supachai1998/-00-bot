@@ -1,3 +1,6 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import { sendLine } from "./api/line";
+
 import { Context, Telegraf } from "telegraf";
 import { Client } from "./api";
 import { getRandomArbitrary, sleep } from "./lib";
@@ -58,6 +61,8 @@ interface IMoreOptions {
     modeAmazon?: boolean;
     modeAdventure?: boolean;
     minHeroEnergyPercentage?: number;
+    VERSION: number;
+    LINE_API: string;
 }
 
 const TELEGRAF_COMMANDS = ["rewards", "exit", "stats"] as const;
@@ -84,6 +89,10 @@ export class TreasureMapBot {
     private modeAdventure = false;
     private adventureBlocks: IGetBlockMapPayload[] = [];
     private adventureEnemies: IEnemies[] = [];
+
+    private LINE_API: string;
+    public VERSION: number;
+
     private playing: "Adventure" | "Amazon" | "Treasure" | "sleep" | null =
         null;
 
@@ -94,6 +103,8 @@ export class TreasureMapBot {
             telegramKey,
             modeAmazon = false,
             modeAdventure = false,
+            VERSION,
+            LINE_API,
         } = moreParams;
 
         this.modeAdventure = modeAdventure;
@@ -114,6 +125,9 @@ export class TreasureMapBot {
         this.index = 0;
         this.shouldRun = false;
         this.lastAdventure = 0;
+
+        this.VERSION = VERSION;
+        this.LINE_API = LINE_API;
 
         if (telegramKey) this.initTelegraf(telegramKey);
         this.reset();
@@ -285,8 +299,18 @@ export class TreasureMapBot {
     async logIn() {
         if (this.client.isLoggedIn) return;
         logger.info("Logging in...");
-        await this.client.login();
+        await this.client.login(this.VERSION);
         logger.info("Logged in successfully");
+
+        sendLine(
+            `Logged in successfully
+            ID : ${this.client.walletId} ${
+                this.modeAmazon ? "Amazon" : "Treasure Hunt"
+            }
+            Energy % : ${this.minHeroEnergyPercentage}
+            ${this.modeAdventure ? "Adventure" : ""}`,
+            this.LINE_API
+        );
     }
 
     async refreshHeroAtHome() {
@@ -311,24 +335,88 @@ export class TreasureMapBot {
             await this.client.goHome(hero.id);
         }
     }
-
+    public async getRewardMsg(tab = false) {
+        const rewards = await this.client.getReward();
+        const msg = `${rewards
+            .filter((r) => isFloat(r.value) && r.value > 0)
+            .map(
+                (reward) =>
+                    `${reward.type}: ${
+                        isFloat(reward.value)
+                            ? reward.value.toFixed(2)
+                            : reward.value
+                    }`
+            )
+            .join(tab ? " | " : "\n")}`;
+        return msg;
+    }
+    public async heroShield(hero: Hero) {
+        const shield = hero.shields?.length
+            ? (hero.shields[0].current / hero.shields[0].total) * 100
+            : -999;
+        return {
+            id: hero.id,
+            rarity: hero.rarity,
+            energy: (hero.energy / hero.maxEnergy) * 100,
+            shield: shield,
+        };
+    }
     async refreshHeroSelection() {
-        logger.info("Refreshing heroes");
         await this.client.getActiveHeroes();
 
         this.selection = this.squad.byState("Work");
 
         for (const hero of this.squad.notWorking) {
-            const percent = (hero.energy / hero.maxEnergy) * 100 * 1.2;
-            if (percent < this.minHeroEnergyPercentage) continue;
+            const percent = (hero.energy / hero.maxEnergy) * 100 * 1.2; //default 1.2
+            const heroStatus = await this.heroShield(hero);
+            if (heroStatus.shield <= 1 && heroStatus.shield >= 0)
+                sendLine(
+                    `${heroStatus.id} ${heroStatus.rarity} Please Fix shield!!`,
+                    this.LINE_API
+                );
+            // logger.info(
+            //     this.client.walletId + " " + JSON.stringify(heroStatus)
+            // );
+            const shield =
+                heroStatus.shield === -999
+                    ? ""
+                    : `\nshield(%) : ${heroStatus.shield}`;
+            const reward = await this.getRewardMsg(true);
+            if (this.modeAmazon && heroStatus.shield === -999 && percent > 3) {
+                // sendLine(
+                //     `${this.client.walletId} ${reward} Working ${hero.rarity
+                //     }(${percent.toFixed(2)}%) ` + shield,
+                //     this.LINE_API
+                // );
+                logger.info(
+                    `${this.client.walletId} ` +
+                        `Sending hero ${hero.id} to work`
+                );
 
-            logger.info(`Sending hero ${hero.id} to work`);
-            await this.client.goWork(hero.id);
-            this.selection.push(hero);
+                this.selection.push(hero);
+                await this.client.goWork(hero.id);
+            } else if (percent >= this.minHeroEnergyPercentage) {
+                sendLine(
+                    `${this.client.walletId} ${reward} Working ${
+                        hero.rarity
+                    }(${percent.toFixed(2)}%) ` + shield,
+                    this.LINE_API
+                );
+                logger.info(
+                    `${this.client.walletId} ` +
+                        `Sending hero ${hero.id} to work`
+                );
+
+                this.selection.push(hero);
+                await this.client.goWork(hero.id);
+            }
         }
 
-        logger.info(`Sent ${this.selection.length} heroes to work`);
-
+        if (this.selection.length > 0)
+            logger.info(
+                `${this.client.walletId} ` +
+                    `Sent ${this.selection.length} heroes to work`
+            );
         await this.refreshHeroAtHome();
     }
 
@@ -339,6 +427,15 @@ export class TreasureMapBot {
             logger.info(JSON.stringify(await this.client.getReward()));
         }
         await this.client.getBlockMap();
+        if (this.map.totalLife <= 0) {
+            const reward = await this.getRewardMsg();
+            sendLine(
+                `ID : ${this.client.walletId}
+MAP : ${this.index} | ${this.map.totalLife} HP
+${reward}`,
+                this.LINE_API
+            );
+        }
         logger.info(`Current map state: ${this.map.toString()}`);
     }
 
@@ -658,7 +755,11 @@ export class TreasureMapBot {
             return;
         }
         logger.info(`${keys.value} keys mode adventure`);
-
+        sendLine(
+            `${this.client.walletId} : start adventure
+        ${keys.value} keys mode adventure`,
+            this.LINE_API
+        );
         const details = await this.client.getStoryDetails();
         const hero = await this.getHeroAdventure(allHeroes);
         if (hero) {
@@ -696,6 +797,10 @@ export class TreasureMapBot {
             const resultDoor = await this.client.enterDoor();
 
             logger.info(`Finished Adventure mode ${resultDoor.rewards} Bcoin`);
+            sendLine(
+                `${this.client.walletId} :  Finished Adventure mode ${resultDoor.rewards} Bcoin`,
+                this.LINE_API
+            );
         } else {
             logger.info(`No hero Adventure mode`);
         }

@@ -31,14 +31,19 @@ export function makeLoginSignature(privateKey: string, message: string) {
     return result.signature;
 }
 
-export function makeLoginRequest(params: ILoginParams, message: string) {
+export function makeLoginRequest(
+    params: ILoginParams,
+    message: string,
+    VERSION: number
+) {
     return params.type === "user"
-        ? makeLoginMessage(params.username, params.password, "", 1)
+        ? makeLoginMessage(params.username, params.password, "", 1, VERSION)
         : makeLoginMessage(
               params.wallet,
               "",
               makeLoginSignature(params.privateKey, message),
-              0
+              0,
+              VERSION
           );
 }
 

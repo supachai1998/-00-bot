@@ -243,7 +243,7 @@ export class Client {
         });
     }
 
-    async login(timeout = 0) {
+    async login(VERSION: number, timeout = 0) {
         if (this.isLoggedIn) return this.walletId;
 
         let message = "";
@@ -265,7 +265,10 @@ export class Client {
         await this.connect();
         return await makeUniquePromise(
             this.controller.login,
-            () => this.sfs.send(makeLoginRequest(this.loginParams, message)),
+            () =>
+                this.sfs.send(
+                    makeLoginRequest(this.loginParams, message, VERSION)
+                ),
             timeout || this.timeout
         );
     }
