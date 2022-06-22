@@ -53,7 +53,6 @@ async function main() {
             version += 1;
         }
     }
-    // version -= 1;
     fs.writeFile("./src/version.txt", version + "", function (err) {
         if (err) throw err;
         console.log(`current version : ${version}`);
