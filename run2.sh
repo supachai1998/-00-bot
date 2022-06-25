@@ -3,7 +3,7 @@
 # MODE_AMAZON[boolean]
 # MODE_ADVENTURE[boolean]
 # LINE_API[string]
-yarn go
+# yarn go
 while true
 do
     # LOGIN2="user:at123457:1*3*5*" LINE_API2="SRiDgJf3Dz80Fsou3O5fs0tnIpGIaq2OFiRambwpfsv"  \
