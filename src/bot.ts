@@ -221,9 +221,10 @@ export class TreasureMapBot {
                 rewards
                     .map(
                         (reward) =>
-                            `${reward.type}: ${isFloat(reward.value)
-                                ? reward.value.toFixed(2)
-                                : reward.value
+                            `${reward.type}: ${
+                                isFloat(reward.value)
+                                    ? reward.value.toFixed(2)
+                                    : reward.value
                             }`
                     )
                     .join("\n");
@@ -303,7 +304,8 @@ export class TreasureMapBot {
 
         sendLine(
             `Logged in successfully
-            ID : ${this.client.walletId} ${this.modeAmazon ? "Amazon" : "Treasure Hunt"
+            ID : ${this.client.walletId} ${
+                this.modeAmazon ? "Amazon" : "Treasure Hunt"
             }
             Energy % : ${this.minHeroEnergyPercentage}
             ${this.modeAdventure ? "Adventure" : ""}`,
@@ -339,9 +341,10 @@ export class TreasureMapBot {
             .filter((r) => isFloat(r.value) && r.value > 0)
             .map(
                 (reward) =>
-                    `${reward.type}: ${isFloat(reward.value)
-                        ? reward.value.toFixed(2)
-                        : reward.value
+                    `${reward.type}: ${
+                        isFloat(reward.value)
+                            ? reward.value.toFixed(2)
+                            : reward.value
                     }`
             )
             .join(tab ? " | " : "\n")}`;
@@ -377,24 +380,28 @@ export class TreasureMapBot {
                     ? ""
                     : `\nshield(%) : ${heroStatus.shield}`;
             const reward = await this.getRewardMsg(true);
-            if (this.modeAmazon && heroStatus.shield === -999 && percent * 1.2 > 3) {
-
+            if (
+                this.modeAmazon &&
+                heroStatus.shield === -999 &&
+                percent * 1.2 > 3
+            ) {
                 logger.info(
                     `${this.client.walletId} ` +
-                    `Sending hero ${hero.id} to work`
+                        `Sending hero ${hero.id} to work`
                 );
 
                 this.selection.push(hero);
                 await this.client.goWork(hero.id);
             } else if (percent * 1.2 >= this.minHeroEnergyPercentage) {
                 sendLine(
-                    `${this.client.walletId} ${reward} Working ${hero.rarity
+                    `${this.client.walletId} ${reward} Working ${
+                        hero.rarity
                     }(${percent.toFixed(2)}%) ` + shield,
                     this.LINE_API
                 );
                 logger.info(
                     `${this.client.walletId} ` +
-                    `Sending hero ${hero.id} to work`
+                        `Sending hero ${hero.id} to work`
                 );
 
                 this.selection.push(hero);
@@ -405,7 +412,7 @@ export class TreasureMapBot {
         if (this.selection.length > 0)
             logger.info(
                 `${this.client.walletId} ` +
-                `Sent ${this.selection.length} heroes to work`
+                    `Sent ${this.selection.length} heroes to work`
             );
         await this.refreshHeroAtHome();
     }
@@ -533,7 +540,7 @@ ${reward}`,
 
         logger.info(
             `${hero.rarity} ${hero.id} ${hero.energy}/${hero.maxEnergy} will place ` +
-            `bomb on (${location.i}, ${location.j})`
+                `bomb on (${location.i}, ${location.j})`
         );
         await sleep(3000);
         const method = this.modeAmazon ? "startExplodeV2" : "startExplode";
@@ -776,7 +783,8 @@ ${reward}`,
             ); //placebomb door
 
             logger.info(
-                `total enemies after door: ${this.adventureEnemies.filter((enemy) => enemy.hp > 0).length
+                `total enemies after door: ${
+                    this.adventureEnemies.filter((enemy) => enemy.hp > 0).length
                 }`
             );
             await this.placeBombsAdventure(hero, result); //verifica se tem mais enimies
