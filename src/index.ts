@@ -74,6 +74,7 @@ async function main() {
             minHeroEnergyPercentage: minHeroEnergyPercentage,
             modeAmazon: modeAmazon,
             modeAdventure: modeAdventure,
+            houseHeroes: askAndParseEnv(`HOUSE_HEROES${i+1}`, identity, ""),
             LINE_API: LINE_API,
         });
         console.log(

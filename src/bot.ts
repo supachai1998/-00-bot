@@ -58,6 +58,7 @@ type HeroBombs = { lastId: number; ids: number[] };
 interface IMoreOptions {
     telegramKey?: string;
     forceExit?: boolean;
+    houseHeroes?: string;
     modeAmazon?: boolean;
     modeAdventure?: boolean;
     minHeroEnergyPercentage?: number;
@@ -84,6 +85,7 @@ export class TreasureMapBot {
     private shouldRun: boolean;
     private lastAdventure: number;
     private forceExit = true;
+    private houseHeroes: string[] = [];
     private minHeroEnergyPercentage;
     private modeAmazon = false;
     private modeAdventure = false;
@@ -101,12 +103,13 @@ export class TreasureMapBot {
             forceExit = true,
             minHeroEnergyPercentage = 90,
             telegramKey,
+            houseHeroes = "",
             modeAmazon = false,
             modeAdventure = false,
             VERSION,
             LINE_API,
         } = moreParams;
-
+        this.houseHeroes = houseHeroes.split(":");
         this.modeAdventure = modeAdventure;
         this.modeAmazon = modeAmazon;
         this.playing = null;
@@ -221,10 +224,9 @@ export class TreasureMapBot {
                 rewards
                     .map(
                         (reward) =>
-                            `${reward.type}: ${
-                                isFloat(reward.value)
-                                    ? reward.value.toFixed(2)
-                                    : reward.value
+                            `${reward.type}: ${isFloat(reward.value)
+                                ? reward.value.toFixed(2)
+                                : reward.value
                             }`
                     )
                     .join("\n");
@@ -236,13 +238,13 @@ export class TreasureMapBot {
     }
 
     public async handleTelegraf(command: ETelegrafCommand, context: Context) {
-        logger.info(`Running command ${command} from ${context.from?.id}.`);
+        logger.info(`${this.client.walletId} Running command ${command} from ${context.from?.id}.`);
 
         const now = Date.now() / 1000;
         const timedelta = now - (context.message?.date || 0);
 
         if (timedelta >= 30) {
-            logger.info(`Ignoring message ${context.message?.message_id}`);
+            logger.info(`${this.client.walletId} Ignoring message ${context.message?.message_id}`);
             return;
         }
 
@@ -304,8 +306,7 @@ export class TreasureMapBot {
 
         sendLine(
             `Logged in successfully
-            ID : ${this.client.walletId} ${
-                this.modeAmazon ? "Amazon" : "Treasure Hunt"
+            ID : ${this.client.walletId} ${this.modeAmazon ? "Amazon" : "Treasure Hunt"
             }
             Energy % : ${this.minHeroEnergyPercentage}
             ${this.modeAdventure ? "Adventure" : ""}`,
@@ -315,23 +316,28 @@ export class TreasureMapBot {
 
     async refreshHeroAtHome() {
         const homeSelection = this.squad.notWorking
-            .sort((a, b) => a.energy - b.energy)
+            .filter(
+                (hero) =>
+                    this.houseHeroes.includes(hero.id.toString()) ||
+                    this.houseHeroes.length == 0
+            )
+            .sort((a, b) => b.rarityIndex - a.rarityIndex)
             .slice(0, this.homeSlots);
 
-        logger.info(`Will send heroes home (${this.homeSlots} slots)`);
+        logger.info(`${this.client.walletId} Will send heroes home (${this.homeSlots} slots)`);
 
         const atHome = this.squad.byState("Home");
 
         for (const hero of atHome) {
             if (homeSelection.some((hs) => hs.id === hero.id)) continue;
 
-            logger.info(`Removing hero ${hero.id} from home`);
+            logger.info(`${this.client.walletId} Removing hero ${hero.id} from home`);
             await this.client.goSleep(hero.id);
         }
         for (const hero of homeSelection) {
             if (hero.state === "Home") continue;
 
-            logger.info(`Sending hero ${hero.id} home`);
+            logger.info(`${this.client.walletId} Sending hero ${hero.id} home`);
             await this.client.goHome(hero.id);
         }
     }
@@ -341,10 +347,9 @@ export class TreasureMapBot {
             .filter((r) => isFloat(r.value) && r.value > 0)
             .map(
                 (reward) =>
-                    `${reward.type}: ${
-                        isFloat(reward.value)
-                            ? reward.value.toFixed(2)
-                            : reward.value
+                    `${reward.type}: ${isFloat(reward.value)
+                        ? reward.value.toFixed(2)
+                        : reward.value
                     }`
             )
             .join(tab ? " | " : "\n")}`;
@@ -387,21 +392,20 @@ export class TreasureMapBot {
             ) {
                 logger.info(
                     `${this.client.walletId} ` +
-                        `Sending hero ${hero.id} to work`
+                    `Sending hero ${hero.id} to work`
                 );
 
                 this.selection.push(hero);
                 await this.client.goWork(hero.id);
             } else if (percent * 1.2 >= this.minHeroEnergyPercentage) {
                 sendLine(
-                    `${this.client.walletId} ${reward} Working ${
-                        hero.rarity
+                    `${this.client.walletId} ${reward} Working ${hero.rarity
                     }(${percent.toFixed(2)}%) ` + shield,
                     this.LINE_API
                 );
                 logger.info(
                     `${this.client.walletId} ` +
-                        `Sending hero ${hero.id} to work`
+                    `Sending hero ${hero.id} to work`
                 );
 
                 this.selection.push(hero);
@@ -412,13 +416,13 @@ export class TreasureMapBot {
         if (this.selection.length > 0)
             logger.info(
                 `${this.client.walletId} ` +
-                    `Sent ${this.selection.length} heroes to work`
+                `Sent ${this.selection.length} heroes to work`
             );
         await this.refreshHeroAtHome();
     }
 
     async refreshMap() {
-        logger.info(`Refreshing map...`);
+        logger.info(`${this.client.walletId} Refreshing map...`);
         if (this.map.totalLife <= 0) {
             this.resetState();
             logger.info(JSON.stringify(await this.client.getReward()));
@@ -433,7 +437,7 @@ ${reward}`,
                 this.LINE_API
             );
         }
-        logger.info(`Current map state: ${this.map.toString()}`);
+        logger.info(`${this.client.walletId} Current map state: ${this.map.toString()}`);
     }
 
     nextLocation(hero: Hero) {
@@ -538,10 +542,10 @@ ${reward}`,
 
         this.history.push(location);
 
-        logger.info(
-            `${hero.rarity} ${hero.id} ${hero.energy}/${hero.maxEnergy} will place ` +
-                `bomb on (${location.i}, ${location.j})`
-        );
+        // logger.info(
+        //     `${hero.rarity} ${hero.id} ${hero.energy}/${hero.maxEnergy} will place ` +
+        //     `bomb on (${location.i}, ${location.j})`
+        // );
         await sleep(3000);
         const method = this.modeAmazon ? "startExplodeV2" : "startExplode";
         const result = await this.client[method]({
@@ -562,7 +566,7 @@ ${reward}`,
         while (this.history.length > HISTORY_SIZE) this.history.shift();
 
         if (energy <= 0) {
-            logger.info(`Sending hero ${hero.id} to sleep`);
+            logger.info(`${this.client.walletId} Sending hero ${hero.id} to sleep`);
             await this.client.goSleep(hero.id);
             await this.refreshHeroAtHome();
             await this.refreshHeroSelection();
@@ -589,7 +593,7 @@ ${reward}`,
             this.shouldRun
         ) {
             for (const hero of this.workingSelection) {
-                await sleep(70);
+                await sleep(400);
 
                 running[hero.id] = hero;
                 const promise = this.placeBombsHero(hero).catch((e) => {
@@ -745,13 +749,13 @@ ${reward}`,
         const rewards = await this.client.getReward();
         const keys = rewards.filter((reward) => reward.type === "Key")[0];
 
-        logger.info(`Adventure mode iteration`);
+        logger.info(`${this.client.walletId} Adventure mode iteration`);
 
         if (!keys || keys.value === 0) {
-            logger.info(`No keys to play right now.`);
+            logger.info(`${this.client.walletId} No keys to play right now.`);
             return;
         }
-        logger.info(`${keys.value} keys mode adventure`);
+        logger.info(`${this.client.walletId} ${keys.value} keys mode adventure`);
         sendLine(
             `${this.client.walletId} : start adventure
         ${keys.value} keys mode adventure`,
@@ -762,12 +766,12 @@ ${reward}`,
         if (hero) {
             const level = Math.min(details.max_level + 1, 45);
 
-            logger.info(`Will play level ${level} with hero ${hero.id}`);
+            logger.info(`${this.client.walletId} Will play level ${level} with hero ${hero.id}`);
 
             const result = await this.client.getStoryMap(hero.id, level);
             this.adventureBlocks = result.positions;
             this.adventureEnemies = result.enemies;
-            logger.info(`Total enemies: ${this.adventureEnemies.length}`);
+            logger.info(`${this.client.walletId} Total enemies: ${this.adventureEnemies.length}`);
 
             await this.placeBombsAdventure(hero, result);
             logger.info(
@@ -783,23 +787,22 @@ ${reward}`,
             ); //placebomb door
 
             logger.info(
-                `total enemies after door: ${
-                    this.adventureEnemies.filter((enemy) => enemy.hp > 0).length
+                `total enemies after door: ${this.adventureEnemies.filter((enemy) => enemy.hp > 0).length
                 }`
             );
             await this.placeBombsAdventure(hero, result); //verifica se tem mais enimies
 
             if (!this.shouldRun) return false;
-            logger.info(`Enter door adventure mode`);
+            logger.info(`${this.client.walletId} Enter door adventure mode`);
             const resultDoor = await this.client.enterDoor();
 
-            logger.info(`Finished Adventure mode ${resultDoor.rewards} Bcoin`);
+            logger.info(`${this.client.walletId} Finished Adventure mode ${resultDoor.rewards} Bcoin`);
             sendLine(
                 `${this.client.walletId} :  Finished Adventure mode ${resultDoor.rewards} Bcoin`,
                 this.LINE_API
             );
         } else {
-            logger.info(`No hero Adventure mode`);
+            logger.info(`${this.client.walletId} No hero Adventure mode`);
         }
     }
 
@@ -821,19 +824,19 @@ ${reward}`,
         await this.loadHouses();
         await this.refreshMap();
         await this.refreshHeroSelection();
-
+        const min = 5 
         do {
             if (this.map.totalLife <= 0) await this.refreshMap();
             await this.refreshHeroSelection();
 
             if (this.workingSelection.length > 0) {
-                logger.info("Opening map...");
+                // logger.info("Opening map...");
                 this.playing = this.modeAmazon ? "Amazon" : "Treasure";
                 await this.client.startPVE(0, this.modeAmazon);
 
                 await this.placeBombs();
                 await this.sleepAllHeroes();
-                logger.info("Closing map...");
+                // logger.info("Closing map...");
                 await this.client.stopPVE();
             }
             logger.info("There are no heroes to work now.");
@@ -850,8 +853,8 @@ ${reward}`,
                 this.lastAdventure = Date.now();
             }
             this.playing = "sleep";
-            logger.info("Will sleep for 2 minutes");
-            await sleep(120000);
+            logger.info(`${this.client.walletId} Will sleep for ${min} minutes`);
+            await sleep(min * 60 * 1000);
         } while (this.shouldRun);
     }
 
@@ -965,7 +968,7 @@ ${reward}`,
             // });
         }
         if (payload.enemies && payload.enemies.length) {
-            logger.info(`add enemies ${payload.enemies.length}`);
+            logger.info(`${this.client.walletId} add enemies ${payload.enemies.length}`);
             payload.enemies.forEach((enemy) => {
                 this.adventureEnemies.push(enemy);
             });
