@@ -305,11 +305,9 @@ export class TreasureMapBot {
         logger.info("Logged in successfully");
 
         sendLine(
-            `Logged in successfully
-            ID : ${this.client.walletId} ${this.modeAmazon ? "Amazon" : "Treasure Hunt"
-            }
-            Energy % : ${this.minHeroEnergyPercentage}
-            ${this.modeAdventure ? "Adventure" : ""}`,
+            `ID : ${this.client.walletId} ${this.modeAmazon ? "Amazon" : "Treasure Hunt"}
+Energy % : ${this.minHeroEnergyPercentage}
+${this.modeAdventure ? "Adventure" : ""}`,
             this.LINE_API
         );
     }
@@ -426,17 +424,14 @@ export class TreasureMapBot {
         if (this.map.totalLife <= 0) {
             this.resetState();
             logger.info(JSON.stringify(await this.client.getReward()));
-        }
-        await this.client.getBlockMap();
-        if (this.map.totalLife <= 0) {
             const reward = await this.getRewardMsg();
             sendLine(
                 `ID : ${this.client.walletId}
-MAP : ${this.index} | ${this.map.totalLife} HP
 ${reward}`,
                 this.LINE_API
             );
         }
+        await this.client.getBlockMap();
         logger.info(`${this.client.walletId} Current map state: ${this.map.toString()}`);
     }
 
@@ -824,7 +819,7 @@ ${reward}`,
         await this.loadHouses();
         await this.refreshMap();
         await this.refreshHeroSelection();
-        const min = 5 
+        const min = 5
         do {
             if (this.map.totalLife <= 0) await this.refreshMap();
             await this.refreshHeroSelection();
