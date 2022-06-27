@@ -613,7 +613,7 @@ ${reward}`,
             this.shouldRun
         ) {
             for (const hero of this.workingSelection) {
-                await sleep(400);
+                await sleep(70);
 
                 running[hero.id] = hero;
                 const promise = this.placeBombsHero(hero).catch((e) => {
@@ -853,7 +853,7 @@ ${reward}`,
         await this.loadHouses();
         await this.refreshMap();
         await this.refreshHeroSelection();
-        const min = 5;
+        const min = 3;
         do {
             if (this.map.totalLife <= 0) await this.refreshMap();
             await this.refreshHeroSelection();
