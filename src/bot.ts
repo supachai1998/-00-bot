@@ -308,11 +308,12 @@ export class TreasureMapBot {
         logger.info("Logging in...");
         await this.client.login(this.VERSION);
         logger.info("Logged in successfully");
-
+        const currentMap = await this.getPercentMap();
         sendLine(
             `ID : ${this.client.walletId} ${
                 this.modeAmazon ? "Amazon" : "Treasure Hunt"
             }
+MAP HP : ${currentMap}%
 Deploy Hero > Energy ${this.minHeroEnergyPercentage} %${
                 this.modeAdventure ? "\nAdventure : Activate" : ""
             }`,
@@ -330,9 +331,9 @@ Deploy Hero > Energy ${this.minHeroEnergyPercentage} %${
             .sort((a, b) => b.rarityIndex - a.rarityIndex)
             .slice(0, this.homeSlots);
 
-        logger.info(
-            `${this.client.walletId} Will send heroes home (${this.homeSlots} slots)`
-        );
+        // logger.info(
+        //     `${this.client.walletId} Will send heroes home (${this.homeSlots} slots)`
+        // );
 
         const atHome = this.squad.byState("Home");
 
@@ -379,7 +380,7 @@ Deploy Hero > Energy ${this.minHeroEnergyPercentage} %${
     }
     async refreshHeroSelection() {
         await this.client.getActiveHeroes();
-
+        const currentMap = await this.getPercentMap();
         this.selection = this.squad.byState("Work");
         const reward = await this.getRewardMsg(true);
         for (const hero of this.squad.notWorking) {
@@ -411,29 +412,38 @@ Deploy Hero > Energy ${this.minHeroEnergyPercentage} %${
             } else if (percent * 1.2 >= this.minHeroEnergyPercentage) {
                 sendLine(
                     `${this.client.walletId} ${reward} 
-                    Working ${hero.rarity}(${percent.toFixed(2)}%) ` + shield,
+MAP HP: ${currentMap}%
+Working ${hero.rarity}(${percent.toFixed(2)}%) ` + shield,
                     this.LINE_API
                 );
-                // logger.info(
-                //     `${this.client.walletId} ${reward}
-                //     Working ${hero.rarity}(${percent.toFixed(2)}%) ` + shield
-                // );
+                logger.info(
+                    `${this.client.walletId} ${reward}
+MAP HP: ${currentMap}%
+Working ${hero.rarity}(${percent.toFixed(2)}%) ` + shield
+                );
 
                 this.selection.push(hero);
                 await this.client.goWork(hero.id);
             }
         }
 
-        if (this.selection.length > 0)
-            logger.info(
-                `${this.client.walletId} ${reward}` +
-                    `Sent ${this.selection.length} heroes to work`
-            );
+        // if (this.selection.length > 0)
+        //     logger.info(
+        //         `${this.client.walletId} ${reward}` +
+        //             ` Sent ${this.selection.length} heroes to work`
+        //     );
         await this.refreshHeroAtHome();
     }
-
+    async getPercentMap() {
+        await this.client.getBlockMap();
+        const _map = this.map.toString();
+        const map_remain = parseInt(_map.split("/")[0].split(" ")[1]);
+        const map_total = parseInt(_map.split("/")[1]);
+        return ((map_remain / map_total) * 100).toFixed(2);
+    }
     async refreshMap() {
-        logger.info(`${this.client.walletId} Refreshing map...`);
+        // logger.info(`${this.client.walletId} Refreshing map...`);
+        const currentMap = await this.getPercentMap();
         if (this.map.totalLife <= 0) {
             this.resetState();
             logger.info(JSON.stringify(await this.client.getReward()));
@@ -444,10 +454,8 @@ ${reward}`,
                 this.LINE_API
             );
         }
-        await this.client.getBlockMap();
-        logger.info(
-            `${this.client.walletId} Current map state: ${this.map.toString()}`
-        );
+
+        logger.info(`${this.client.walletId} MAP HP: ${currentMap} %`);
     }
 
     nextLocation(hero: Hero) {
@@ -576,9 +584,9 @@ ${reward}`,
         while (this.history.length > HISTORY_SIZE) this.history.shift();
 
         if (energy <= 0) {
-            logger.info(
-                `${this.client.walletId} Sending hero ${hero.id} to sleep`
-            );
+            // logger.info(
+            //     `${this.client.walletId} Sending hero ${hero.id} to sleep`
+            // );
             await this.client.goSleep(hero.id);
             await this.refreshHeroAtHome();
             await this.refreshHeroSelection();
@@ -833,7 +841,7 @@ ${reward}`,
     }
 
     async sleepAllHeroes() {
-        logger.info("Sleep all heroes...");
+        // logger.info("Sleep all heroes...");
         for (const hero of this.workingSelection) {
             await this.client.goSleep(hero.id);
         }
@@ -860,7 +868,7 @@ ${reward}`,
                 // logger.info("Closing map...");
                 await this.client.stopPVE();
             }
-            logger.info("There are no heroes to work now.");
+            // logger.info("There are no heroes to work now.");
 
             if (
                 (Date.now() > this.lastAdventure + 10 * 60 * 1000 ||
@@ -874,9 +882,9 @@ ${reward}`,
                 this.lastAdventure = Date.now();
             }
             this.playing = "sleep";
-            logger.info(
-                `${this.client.walletId} Will sleep for ${min} minutes`
-            );
+            // logger.info(
+            //     `${this.client.walletId} Will sleep for ${min} minutes`
+            // );
             await sleep(min * 60 * 1000);
         } while (this.shouldRun);
     }
