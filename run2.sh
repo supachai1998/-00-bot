@@ -12,7 +12,7 @@ do
     LOGIN3="user:royal3:333333"  LINE_API3="XdCHOKlM2AtlSJ5App70CpnCjAovaqsQZaSStadtyqi" \
     LOGIN4="user:royal4:444444"  LINE_API4="XdCHOKlM2AtlSJ5App70CpnCjAovaqsQZaSStadtyqi" \
     LOGIN5="user:royal5:555555"  LINE_API5="XdCHOKlM2AtlSJ5App70CpnCjAovaqsQZaSStadtyqi" \
-    LOGIN6="user:BobbyScholar:BobbyH"  \
+    LOGIN6="user:BobbyScholar:BobbyH" LINE_API6="SRiDgJf3Dz80Fsou3O5fs0tnIpGIaq2OFiRambwpfsv"  \
     yarn start
     RR=$((60+RANDOM % (150-60)))
     echo "Restarting... $RR seconds"
