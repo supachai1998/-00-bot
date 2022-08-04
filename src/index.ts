@@ -17,6 +17,23 @@ import { sleep, sendLine } from "./api/line";
 import fetch from "node-fetch";
 import * as fs from "fs";
 
+const fn_fetch_version = async (v: number) =>
+    await fetch(
+        `https://app.bombcrypto.io/android/com.senspark.bombcrypto-v${v}.apk`,
+        {
+            headers: {
+                "User-Agent":
+                    "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:103.0) Gecko/20100101 Firefox/103.0",
+                Accept: "*/*",
+                "Accept-Language": "th,en-US;q=0.7,en;q=0.3",
+                "Sec-Fetch-Dest": "empty",
+                "Sec-Fetch-Mode": "cors",
+                "Sec-Fetch-Site": "same-origin",
+            },
+            method: "GET",
+        }
+    );
+
 async function main() {
     const _bot: any[] = [];
     const _params: any[] = [];
@@ -42,15 +59,29 @@ async function main() {
     console.log(`found user : ${_params.length}`);
     if (!_params.length) return console.log("no user found");
 
+    let err = 0;
     while (true) {
-        const fetch_version = await fetch(
-            `https://app.bombcrypto.io/android/com.senspark.bombcrypto-v${version}.apk`
-        );
-        if (!fetch_version.ok) {
+        const fetch_version = await fn_fetch_version(version);
+        console.log(version, fetch_version.status);
+        if (fetch_version.status === 200) {
+            while (true) {
+                const fetch_version2 = await fn_fetch_version(version);
+                console.log(version, fetch_version2.status);
+                if (fetch_version2.status === 200) {
+                    break;
+                }
+            }
+            break;
+        }
+        if (fetch_version.status !== 200 && fetch_version.status !== 404) {
             version -= 1;
             break;
         } else {
-            version += 1;
+            if (err <= 10) {
+                version += 1;
+                err += 1;
+            }
+            version -= 1;
         }
     }
     fs.writeFile("./src/version.txt", version + "", function (err) {
