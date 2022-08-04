@@ -19,7 +19,7 @@ do
     LOGIN7="user:BobbyScholar:BobbyH" LINE_API7="SRiDgJf3Dz80Fsou3O5fs0tnIpGIaq2OFiRambwpfsv"  \
     
     yarn start
-    # RR=$((60+RANDOM % (150-60)))
-    # echo "Restarting... $RR seconds"
-    # sleep $RR
+    RR=$((60+RANDOM % (150-60)))
+    echo "Restarting... $RR seconds"
+    sleep $RR
 done
