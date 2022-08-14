@@ -76,11 +76,12 @@ async function main() {
                 version -= 1;
                 break;
             }
+            err = 0
         } else {
             if (ok == 0) version += 1;
             err += 1;
         }
-        if (err >= 10) {
+        if (err >= 2) {
             version -= 1;
             break;
         }
