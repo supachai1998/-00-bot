@@ -59,31 +59,34 @@ async function main() {
     console.log(`found user : ${_params.length}`);
     if (!_params.length) return console.log("no user found");
 
+    let ok = 0;
     let err = 0;
     while (true) {
-        const fetch_version = await fn_fetch_version(version);
+        let fetch_version = await fn_fetch_version(version);
         console.log(version, fetch_version.status);
-        if (fetch_version.status === 200) {
-            while (true) {
-                const fetch_version2 = await fn_fetch_version(version);
-                console.log(version, fetch_version2.status);
-                if (fetch_version2.status === 200) {
-                    break;
-                }
+        fetch_version = await fn_fetch_version(version);
+        console.log(version, fetch_version.status);
+        fetch_version = await fn_fetch_version(version);
+        console.log(version, fetch_version.status);
+
+        if (fetch_version.ok) {
+            ok += 1;
+            if (ok < 10) version += 1;
+            if (ok >= 10) {
+                version -= 1;
+                break;
             }
-            break;
-        }
-        if (fetch_version.status !== 200 && fetch_version.status !== 404) {
-            version -= 1;
-            break;
         } else {
-            if (err <= 10) {
-                version += 1;
-                err += 1;
-            }
-            version -= 1;
+            if (ok == 0) version += 1;
+            err += 1;
         }
+        if (err >= 10) {
+            version -= 1;
+            break;
+        }
+
     }
+    console.log(`connect version : ${version}`);
     fs.writeFile("./src/version.txt", version + "", function (err) {
         if (err) throw err;
         console.log(`current version : ${version}`);
